@@ -1,0 +1,19 @@
+version: '3.6'
+services:
+
+    web_service:
+      container_name: web_service
+      build:
+        context: .
+        dockerfile: Dockerfile
+      ports:
+        - "0.0.0.0:4888:4888"
+      volumes:
+        - .:/app/
+
+      environment:
+        APP_HOST: 0.0.0.0
+        APP_PORT: 4888
+
+      networks:
+        - default
