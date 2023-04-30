@@ -3,21 +3,25 @@ import os
 import logging
 import asyncio
 import aiomisc
+import sqlalchemy as sa
 
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from dotenv import load_dotenv
+load_dotenv()
 from aiogram import html
 from aiogram.filters import Text
 from aiogram import F
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
+from models.base import Currency
+from models.base import db_session
 
 logger = logging.getLogger(__name__)
 # Bot token can be obtained via https://t.me/BotFahter
 
-load_dotenv()
+
 
 TOKEN = os.environ["TG_TOKEN"]
 
@@ -102,8 +106,20 @@ async def echo_handler(message: types.Message) -> None:
             return await message.answer(f"{currency} -> {data['val']}")
 
 
+@router.message(Command("db"))
+async def db_handler(message: types.Message) -> None:
+    async with db_session.begin() as session:
+        resp = await session.execute(
+            sa.select(Currency)  # select * from currency;
+        )
+        resp_list = resp.all()
+        print( resp_list )
+
+    await message.answer(f"Виберіть валюту: {resp_list}")
+
+
 async def main() -> None:
-    from models.base import db_session
+
     # ... and all other routers should be attached to Dispatcher
     dp.include_router(router)
 
@@ -111,7 +127,7 @@ async def main() -> None:
     bot = Bot(TOKEN, parse_mode="HTML")
     # And the run events dispatching
     await dp.start_polling(bot)
-    await db_session.close()
+    await db_session.dispose()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
