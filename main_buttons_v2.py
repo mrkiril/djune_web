@@ -15,7 +15,7 @@ from aiogram.filters import Text
 from aiogram import F
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-from models.base import Currency
+from models.base import Currency, db_engine
 from models.base import db_session
 
 logger = logging.getLogger(__name__)
@@ -109,13 +109,13 @@ async def echo_handler(message: types.Message) -> None:
 @router.message(Command("db"))
 async def db_handler(message: types.Message) -> None:
     async with db_session.begin() as session:
-        resp = await session.execute(
+        resp = await session.scalars(
             sa.select(Currency)  # select * from currency;
         )
-        resp_list = resp.all()
+        resp_list: list[Currency] = resp.all()
         print( resp_list )
 
-    await message.answer(f"Виберіть валюту: {resp_list}")
+    await message.answer(f"Виберіть валюту: {len(resp_list)}")
 
 
 async def main() -> None:
@@ -127,7 +127,7 @@ async def main() -> None:
     bot = Bot(TOKEN, parse_mode="HTML")
     # And the run events dispatching
     await dp.start_polling(bot)
-    await db_session.dispose()
+    await db_engine.dispose()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
