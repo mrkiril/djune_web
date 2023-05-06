@@ -65,15 +65,9 @@ def get_keyboard_from_list(currency_name_list: Sequence[str]):
 async def first_select(message: types.Message, state: FSMContext):
     async with db_session.begin() as session:
         resp = await session.scalars(
-            sa.select(Currency)  # select * from currency;
+            sa.select(Currency.currency_from)  # select currency_from from currency;
         )
-        currency_list: list[Currency] = resp.all()
-
-    currency_from_list = []
-    for currency in currency_list:
-        currency_from_list.append(
-            currency.currency_from
-        )
+        currency_from_list: list[str] = resp.all()
 
     builder = get_keyboard_from_list(currency_name_list=set(currency_from_list))
     await message.answer(
@@ -92,13 +86,11 @@ async def second_select(message: types.Message, state: FSMContext) -> None:
         )
         currency_list: list[Currency] = resp.all()
 
-    currency_from_list = []
-    for currency in currency_list:
-        currency_from_list.append(
-            currency.currency_to
-        )
-
-    builder = get_keyboard_from_list(currency_name_list=set(currency_from_list))
+    currency_from_to_list = [
+        f"{currency.currency_from}/{currency.currency_to}"
+        for currency in currency_list
+    ]
+    builder = get_keyboard_from_list(currency_name_list=set(currency_from_to_list))
     await message.answer(
         "Виберіть валюту:",
         reply_markup=builder.as_markup(resize_keyboard=False, one_time_keyboard=True),
@@ -108,17 +100,17 @@ async def second_select(message: types.Message, state: FSMContext) -> None:
 
 @router.message(CurrencyState.second_select)
 async def currency_handler(message: types.Message) -> None:
-    currency = message.text
-    for data in DATA_LIST:
-        curr_1 = data["currency"][0]
-        curr_2 = data["currency"][1]
-        select_curr_1, select_curr_2 = currency.split("/")
-
-        if (
-                (curr_1 == select_curr_1 and curr_2 == select_curr_2)
-                or (curr_1 == select_curr_2 and curr_2 == select_curr_1)
-        ):
-            return await message.answer(f"{currency} -> {data['val']}")
+    currency = message.text  # USD/UAH
+    currency_from, currency_to = currency.split("/")
+    async with db_session.begin() as session:
+        amount = await session.scalar(
+            sa.select(Currency.amount)
+            .where(
+                Currency.currency_from == currency_from,
+                Currency.currency_to == currency_to
+            )  # select * from currency where currency_from = 'USD' and currency_to = 'EUR';
+        )
+        return await message.answer(f"{currency} -> {amount}")
 
 
 @router.message(Command("db"))
