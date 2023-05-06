@@ -85,16 +85,20 @@ async def first_select(message: types.Message, state: FSMContext):
 
 @router.message(CurrencyState.first_select)
 async def second_select(message: types.Message, state: FSMContext) -> None:
-    currency = message.text
+    async with db_session.begin() as session:
+        resp = await session.scalars(
+            sa.select(Currency)
+            .where(Currency.currency_from == message.text)  # select * from currency where select_from = 'USD';
+        )
+        currency_list: list[Currency] = resp.all()
 
-    builder = ReplyKeyboardBuilder()
-    builder.add(
-        types.KeyboardButton(text=f"{currency}/USD"),
-        types.KeyboardButton(text=f"{currency}/EUR"),
-        types.KeyboardButton(text=f"{currency}/KRN"),
-        types.KeyboardButton(text=f"{currency}/ZLT"),
-    )
-    builder.adjust(3)
+    currency_from_list = []
+    for currency in currency_list:
+        currency_from_list.append(
+            currency.currency_to
+        )
+
+    builder = get_keyboard_from_list(currency_name_list=set(currency_from_list))
     await message.answer(
         "Виберіть валюту:",
         reply_markup=builder.as_markup(resize_keyboard=False, one_time_keyboard=True),
