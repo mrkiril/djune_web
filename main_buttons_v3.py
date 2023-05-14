@@ -4,19 +4,14 @@ import logging
 import asyncio
 from typing import Sequence
 
-import aiomisc
 import sqlalchemy as sa
 
 from aiogram import Bot, Dispatcher, Router, types
-from aiogram.filters import Command, CommandObject
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message
 from dotenv import load_dotenv
 load_dotenv()
-from aiogram import html
-from aiogram.filters import Text
-from aiogram import F
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 from models.base import Currency, db_engine
@@ -33,15 +28,6 @@ dp = Dispatcher()
 
 # All handlers should be attached to the Router (or Dispatcher)
 router = Router()
-
-
-DATA_LIST = [
-    {"currency": ("USD", "UAH"), "val": 45.03},
-    {"currency": ("USD", "EUR"), "val": 0.9},
-    {"currency": ("USD", "GBP"), "val": 0.8},
-    {"currency": ("USD", "ZLT"), "val": 5.7},
-    {"currency": ("UAH", "YPI"), "val": 12.0},
-]
 
 
 class CurrencyState(StatesGroup):
@@ -111,18 +97,6 @@ async def currency_handler(message: types.Message) -> None:
             )  # select * from currency where currency_from = 'USD' and currency_to = 'EUR';
         )
         return await message.answer(f"{currency} -> {amount}")
-
-
-@router.message(Command("db"))
-async def db_handler(message: types.Message) -> None:
-    async with db_session.begin() as session:
-        resp = await session.scalars(
-            sa.select(Currency)  # select * from currency;
-        )
-        resp_list: list[Currency] = resp.all()
-        print( resp_list )
-
-    await message.answer(f"Виберіть валюту: {len(resp_list)}")
 
 
 async def main() -> None:
