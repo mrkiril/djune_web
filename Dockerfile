@@ -6,7 +6,6 @@ RUN pip3 install --upgrade pip wheel
 ADD requirements .
 RUN pip3 --no-cache-dir install -r ./dev.txt
 
-RUN rm -rf ~/.cache/pip
 COPY . .
 
-CMD ["python3", "main.py"]
+CMD ["python3", "main_button_v3.py"]
